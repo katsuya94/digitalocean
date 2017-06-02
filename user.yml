@@ -1,0 +1,23 @@
+---
+- name: configure user
+  hosts: digitalocean
+  become: yes
+  tasks:
+    - name: remove user
+      user:
+        name: "{{ user }}"
+        state: absent
+        remove: yes
+    - name: create user
+      user:
+        name: "{{ user }}"
+        password: "{{ lookup('pipe', './password.py') }}"
+        shell: /bin/bash
+        groups:
+          - sudo
+        append: yes
+    - name: add ssh key
+      become_user: "{{ user }}"
+      authorized_key:
+        user: "{{ user }}"
+        key: "{{ lookup('file', pub_key_path) }}"
