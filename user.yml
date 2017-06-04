@@ -1,23 +1,36 @@
 ---
-- name: configure user
+- name: manage users
   hosts: digitalocean
   become: yes
+  vars:
+    prompt_public_key: ./tty_input.py "path to public key for %s:"
+    prompt_password: ./password_input.py "password for %s:"
+    users:
+      - kacchan
+    removed_users: []
   tasks:
-    - name: remove user
+    - name: remove users
       user:
-        name: "{{ user }}"
+        name: "{{ item }}"
         state: absent
         remove: yes
-    - name: create user
+      with_items: "{{ removed_users }}"
+    - name: create users
       user:
-        name: "{{ user }}"
-        password: "{{ lookup('pipe', './password.py') }}"
+        name: "{{ item }}"
         shell: /bin/bash
         groups:
           - sudo
         append: yes
-    - name: add ssh key
-      become_user: "{{ user }}"
+      with_items: "{{ users | difference(removed_users) }}"
+      register: create_result
+    - name: set new user passwords
+      user:
+        name: "{{ item }}"
+        password: "{{ lookup('pipe', prompt_password | format(item)) | password_hash('sha512') }}"
+      with_items: "{{ create_result.results | selectattr('changed') | map(attribute='item') | list }}"
+    - name: add new user ssh keys
       authorized_key:
-        user: "{{ user }}"
-        key: "{{ lookup('file', pub_key_path) }}"
+        user: "{{ item }}"
+        key: "{{ lookup('file', lookup('pipe', prompt_public_key | format(item))) }}"
+      with_items: "{{ create_result.results | selectattr('changed') | map(attribute='item') | list }}"
