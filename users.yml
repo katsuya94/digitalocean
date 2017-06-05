@@ -1,0 +1,58 @@
+---
+- name: manage packages
+  hosts: digitalocean
+  become: yes
+  tasks:
+     - apt: name=sudo
+- name: manage users and ssh
+  hosts: digitalocean
+  become: yes
+  vars:
+    prompt_password: ./password_input.py "password for %s:"
+    users:
+      - kacchan
+    removed_users: []
+  tasks:
+    - name: remove users
+      user:
+        name: "{{ item }}"
+        state: absent
+        remove: yes
+      with_items: "{{ removed_users }}"
+    - name: create users
+      user:
+        name: "{{ item }}"
+        shell: /bin/bash
+        groups:
+          - sudo
+        append: yes
+      with_items: "{{ users | difference(removed_users) }}"
+      register: create_result
+    - name: set new user passwords
+      user:
+        name: "{{ item }}"
+        password: "{{ lookup('pipe', prompt_password | format(item)) | password_hash('sha512') }}"
+      with_items: "{{ create_result.results | selectattr('changed') | map(attribute='item') | list }}"
+    - name: copy authorized_keys
+      copy:
+        src: "{{ item }}/authorized_keys"
+        dest: "/home/{{ item }}/.ssh/authorized_keys"
+      with_items: "{{ users | difference(removed_users) }}"
+    - name: disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin "
+        line: "PermitRootLogin no"
+      register: disable_root_login_result
+    - name: disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication "
+        line: "PasswordAuthentication no"
+      register: disable_password_authentication_result
+    - name: restart sshd
+      systemd:
+        name: ssh
+        state: restarted
+      when: disable_root_login_result.changed or disable_password_authentication_result.changed
+

@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
-
 require "dotenv/load"
 require "net/http"
 require "uri"
