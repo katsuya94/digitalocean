@@ -1,7 +1,0 @@
----
-version: "2"
-services:
-  digitalocean:
-    build: "docker"
-    ports:
-      - "22:22"

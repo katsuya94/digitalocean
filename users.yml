@@ -33,6 +33,11 @@
         name: "{{ item }}"
         password: "{{ lookup('pipe', prompt_password | format(item)) | password_hash('sha512') }}"
       with_items: "{{ create_result.results | selectattr('changed') | map(attribute='item') | list }}"
+    - name: make .ssh directory
+      file:
+        path: "/home/{{ item }}/.ssh"
+        state: directory
+      with_items: "{{ users | difference(removed_users) }}"
     - name: copy authorized_keys
       copy:
         src: "{{ item }}/authorized_keys"
