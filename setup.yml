@@ -1,9 +1,10 @@
 ---
-- name: manage packages
+- name: install sudo
   hosts: digitalocean
   become: yes
   tasks:
-     - apt: name=sudo
+    - name: install sudo
+      apt: name=sudo update_cache=yes
 - name: manage users and ssh
   hosts: digitalocean
   become: yes
@@ -60,4 +61,43 @@
         name: ssh
         state: restarted
       when: disable_root_login_result.changed or disable_password_authentication_result.changed
-
+- name: configure docker
+  hosts: digitalocean
+  become: yes
+  tasks:
+    - name: remove deprecated docker packages
+      apt: "name={{ item }} state=absent"
+      with_items:
+        - docker
+        - docker-engine
+    - name: install packages required to add repository
+      apt: "name={{ item }} update_cache=yes"
+      with_items:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg2
+        - software-properties-common
+    - name: add key
+      apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        id: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+    - name: add repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_lsb.codename }} stable"
+    - name: install docker
+      apt: name=docker-ce update_cache=yes
+- name: configure app user
+  hosts: digitalocean
+  become: yes
+  tasks:
+    - name: create app user
+      user:
+        name: app
+        shell: /bin/bash
+        groups:
+          - docker
+        append: yes
+    - name: create docker group
+      group:
+        name: docker
