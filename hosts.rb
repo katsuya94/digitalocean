@@ -56,4 +56,11 @@ OptionParser.new do |opts|
       "ansible_host" => droplet["networks"]["v4"].first["ip_address"],
     )
   end
+
+  opts.on("--ip HOSTNAME") do |hostname|
+    droplet = DigitalOcean.list["droplets"]
+      .find { |droplet| droplet["name"] == hostname }
+
+    puts droplet["networks"]["v4"].first["ip_address"]
+  end
 end.parse!

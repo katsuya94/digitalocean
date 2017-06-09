@@ -32,12 +32,13 @@ apps.each do |app|
 end
 
 namespace :taskd do
-  task :certificate, [:fqdn] do |_t, args|
-    key = "files/taskd/#{args[:fqdn]}-server.key.pem"
-    certificate = "files/taskd/#{args[:fqdn]}-server.cert.pem"
+  task :certificate, [:hostname] do |_t, args|
+    fqdn = `./hosts.rb --ip #{args[:hostname]}`.chomp
+    key = "files/taskd/#{fqdn}-server.key.pem"
+    certificate = "files/taskd/#{fqdn}-server.cert.pem"
 
     shell "openssl", "req", "-newkey", "rsa:2048", "-nodes", "-keyout", key,
-      "-x509", "-out", certificate, "-subj", "/CN=#{args[:fqdn]}"
+      "-x509", "-out", certificate, "-subj", "/CN=#{fqdn}"
 
     shell "ansible-vault", "encrypt", key
     shell "ansible-vault", "encrypt", certificate
