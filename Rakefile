@@ -7,10 +7,10 @@ def shell(*args)
 end
 
 def shell_check(check, *args)
-  if check
-    shell *args, "--check"
-  else
+  if check.to_s == "false"
     shell *args
+  else
+    shell *args, "--check"
   end
 end
 
@@ -33,8 +33,8 @@ end
 
 namespace :taskd do
   task :certificate, [:fqdn] do |_t, args|
-    key = "files/taskd/#{args[:fqdn]}-key.pem"
-    certificate = "files/taskd/#{args[:fqdn]}-certificate.pem"
+    key = "files/taskd/#{args[:fqdn]}-server.key.pem"
+    certificate = "files/taskd/#{args[:fqdn]}-server.cert.pem"
 
     shell "openssl", "req", "-newkey", "rsa:2048", "-nodes", "-keyout", key,
       "-x509", "-out", certificate, "-subj", "/CN=#{args[:fqdn]}"
