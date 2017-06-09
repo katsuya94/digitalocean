@@ -29,7 +29,7 @@ class DigitalOcean
   end
 
   def self.uri
-    uri = URI("https://api.digitalocean.com")
+    URI("https://api.digitalocean.com")
   end
 
   def self.authorization
@@ -41,14 +41,19 @@ OptionParser.new do |opts|
   opts.banner = "Usage: hosts.rb [options]"
 
   opts.on("--list") do
-    hosts = DigitalOcean.list["droplets"].flat_map do |droplet|
-      droplet["networks"]["v4"].map { |network| network["ip_address"] }
-    end
+    hosts = DigitalOcean.list["droplets"]
+      .map { |droplet| droplet["name"] }
 
     puts JSON.dump({"digitalocean" => hosts})
   end
 
-  opts.on("--host HOSTNAME") do |_hostname|
-    puts JSON.dump({})
+  opts.on("--host HOSTNAME") do |hostname|
+    droplet = DigitalOcean.list["droplets"]
+      .find { |droplet| droplet["name"] == hostname }
+
+    puts JSON.dump(
+      "digitalocean" => droplet,
+      "ansible_host" => droplet["networks"]["v4"].first["ip_address"],
+    )
   end
 end.parse!
