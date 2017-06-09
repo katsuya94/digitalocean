@@ -1,0 +1,39 @@
+---
+- name: taskd
+  hosts: digitalocean
+  gather_facts: no
+  become: true
+  become_user: app
+  tasks:
+    - name: create taskd data directory
+      file:
+        path: /home/app/taskd
+        state: directory
+      register: create_taskd_dir_result
+    - name: initialize taskd data directory
+      docker_container:
+        name: taskd_init
+        image: katsuya94/taskd:latest
+        volumes:
+          - /home/app/taskd:/var/taskd
+        command: taskd init
+        when: createtaskd_dir_result.changed
+    - name: create taskd pki directory
+      file:
+        path: /home/app/taskd/pki
+        state: directory
+    - lineinfile:
+        path: /home/app/taskd/config
+        regexp: "^{{ item.key }}"
+        line: "{{ item.key }}={{ item.value }}"
+      with_dict:
+        log: -
+        server.cert: /var/taskd/pki/server.cert.pem
+        server.key: /var/taskd/pki/server.key.pem
+        server: 0.0.0.0:523589
+    - name: start taskd
+      docker_container:
+        name: taskd
+        image: katsuya94/taskd:latest
+        volumes:
+          - /home/app/taskd:/var/taskd
