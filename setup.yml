@@ -1,12 +1,21 @@
 ---
+- name: verify dependencies
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - fail:
+        msg: passlib not installed
+      when: "lookup('pipe', 'pip freeze | grep -q passlib; echo $?') | int != 0"
 - name: install sudo
   hosts: digitalocean
+  gather_facts: no
   become: yes
   tasks:
     - name: install sudo
       apt: name=sudo update_cache=yes
-- name: manage users and ssh
+- name: manage users
   hosts: digitalocean
+  gather_facts: no
   become: yes
   vars:
     prompt_password: ./password_input.py "password for %s:"
@@ -34,6 +43,8 @@
         name: "{{ item }}"
         password: "{{ lookup('pipe', prompt_password | format(item)) | password_hash('sha512') }}"
       with_items: "{{ create_result.results | selectattr('changed') | map(attribute='item') | list }}"
+      register: set_passwords_result
+      ignore_errors: yes
     - name: make .ssh directory
       file:
         path: "/home/{{ item }}/.ssh"
@@ -44,23 +55,6 @@
         src: "{{ item }}/authorized_keys"
         dest: "/home/{{ item }}/.ssh/authorized_keys"
       with_items: "{{ users | difference(removed_users) }}"
-    - name: disable root login
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^PermitRootLogin "
-        line: "PermitRootLogin no"
-      register: disable_root_login_result
-    - name: disable password authentication
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "^PasswordAuthentication "
-        line: "PasswordAuthentication no"
-      register: disable_password_authentication_result
-    - name: restart sshd
-      systemd:
-        name: ssh
-        state: restarted
-      when: disable_root_login_result.changed or disable_password_authentication_result.changed
 - name: configure docker
   hosts: digitalocean
   become: yes
@@ -89,8 +83,12 @@
       apt: name=docker-ce update_cache=yes
 - name: configure app user
   hosts: digitalocean
+  gather_facts: no
   become: yes
   tasks:
+    - name: create docker group
+      group:
+        name: docker
     - name: create app user
       user:
         name: app
@@ -98,6 +96,25 @@
         groups:
           - docker
         append: yes
-    - name: create docker group
-      group:
-        name: docker
+- name: configure ssh
+  hosts: digitalocean
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin "
+        line: "PermitRootLogin no"
+      register: disable_root_login_result
+    - name: disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^PasswordAuthentication "
+        line: "PasswordAuthentication no"
+      register: disable_password_authentication_result
+    - name: restart sshd
+      systemd:
+        name: ssh
+        state: restarted
+      when: disable_root_login_result.changed or disable_password_authentication_result.changed
