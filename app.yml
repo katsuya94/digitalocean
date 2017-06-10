@@ -26,7 +26,8 @@
       file:
         path: /home/app/taskd/pki
         state: directory
-    - lineinfile:
+    - name: configure taskd
+      lineinfile:
         path: /home/app/taskd/config
         regexp: "^{{ item.key | regex_escape }}="
         line: "{{ item.key }}={{ item.value }}"
@@ -34,11 +35,12 @@
         log: "-"
         server.cert: /var/taskd/pki/server.cert.pem
         server.key: /var/taskd/pki/server.key.pem
-        server: 0.0.0.0:523589
+        server: "0.0.0.0:53589"
         debug: "on"
+        debug.tls: 9
     - name: copy pki files
       copy:
-        src: "taskd/{{ ansible_hostname }}-{{ item }}"
+        src: "taskd/{{ ansible_host }}-{{ item }}"
         dest: "/home/app/taskd/pki/{{ item }}"
       with_items:
         - server.key.pem
@@ -49,3 +51,7 @@
         image: katsuya94/taskd:latest
         volumes:
           - /home/app/taskd:/var/taskd
+        exposed:
+          - "53589"
+        ports:
+          - "53589:53589"
