@@ -36,8 +36,6 @@
         server.cert: /var/taskd/pki/server.cert.pem
         server.key: /var/taskd/pki/server.key.pem
         server: "0.0.0.0:53589"
-        debug: "on"
-        debug.tls: 9
     - name: copy pki files
       copy:
         src: "taskd/{{ ansible_host }}-{{ item }}"
