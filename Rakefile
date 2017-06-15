@@ -1,5 +1,4 @@
 require "dotenv/load"
-require "tempfile"
 
 def shell(*args)
   puts "shell: #{args}"

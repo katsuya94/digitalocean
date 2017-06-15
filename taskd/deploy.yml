@@ -3,32 +3,41 @@
   hosts: digitalocean
   become: true
   become_user: app
+  vars:
+    organizations:
+      - name: Public
+    users:
+      - name: kacchan
+        organization: Public
+    directory: /home/app/taskd
+    docker_volume: "{{ directory }}:/var/taskd"
+    docker_image: katsuya94/taskd:latest
+    docker_run: "docker run -v {{ docker_volume }} -it"
   tasks:
     - name: create taskd data directory
       file:
-        path: /home/app/taskd
+        path: "{{ directory }}"
         state: directory
       register: create_taskd_dir_result
     - name: initialize taskd data directory
-      docker_container:
-        name: taskd_init
-        image: katsuya94/taskd:latest
-        volumes:
-          - /home/app/taskd:/var/taskd
-        command: taskd init
+      command: "{{ docker_run }} taskd init"
       when: create_taskd_dir_result.changed
     - name: change ownership of taskd config
       file:
-        path: /home/app/taskd/config
+        path: "{{ directory }}/config"
         owner: app
       become_user: root
+    - name: create taskd ansible directory
+      file:
+        path: "{{ directory }}/ansible"
+        state: directory
     - name: create taskd pki directory
       file:
-        path: /home/app/taskd/pki
+        path: "{{ directory }}/pki"
         state: directory
     - name: configure taskd
       lineinfile:
-        path: /home/app/taskd/config
+        path: "{{ directory }}//config"
         regexp: "^{{ item.key | regex_escape }}="
         line: "{{ item.key }}={{ item.value }}"
       with_dict:
@@ -39,16 +48,26 @@
     - name: copy pki files
       copy:
         src: "taskd/{{ ansible_host }}-{{ item }}"
-        dest: "/home/app/taskd/pki/{{ item }}"
+        dest: "{{ directory }}/pki/{{ item }}"
       with_items:
         - server.key.pem
         - server.cert.pem
+    - name: add organizations
+      command: "{{ docker_run }} taskd add org {{ item.name }}"
+      args:
+        creates: "{{ directory }}/ansible/{{ item.name }}.organization"
+      with_items: organziations
+    - name: add users
+      command: "{{ docker_run }} taskd add user {{ item.organization }} {{ item.name }}"
+      args:
+        creates: "{{ directory }}/ansible/{{ item.name }}.{{ item.organization }}.user"
+      with_items: users
     - name: start taskd
       docker_container:
         name: taskd
-        image: katsuya94/taskd:latest
+        image: "{{ docker_image }}"
         volumes:
-          - /home/app/taskd:/var/taskd
+          - "{{ docker_volume }}"
         exposed:
           - "53589"
         ports:
