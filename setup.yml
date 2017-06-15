@@ -6,13 +6,16 @@
     - fail:
         msg: passlib not installed
       when: "lookup('pipe', 'pip freeze | grep -q passlib; echo $?') | int != 0"
-- name: install sudo
+- name: install packages
   hosts: digitalocean
   gather_facts: no
   become: yes
   tasks:
-    - name: install sudo
-      apt: name=sudo update_cache=yes
+    - name: install packages
+      apt: "name={{ item }} update_cache=yes"
+      with_items:
+        - sudo
+        - ruby-full
 - name: manage users
   hosts: digitalocean
   gather_facts: no

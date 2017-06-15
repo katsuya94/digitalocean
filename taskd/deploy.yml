@@ -5,14 +5,12 @@
   become_user: app
   vars:
     organizations:
-      - name: Public
-    users:
-      - name: kacchan
-        organization: Public
+      - Public
+    users: []
     directory: /home/app/taskd
     docker_volume: "{{ directory }}:/var/taskd"
     docker_image: katsuya94/taskd:latest
-    docker_run: "docker run -v {{ docker_volume }} -it"
+    docker_run: "docker run -v {{ docker_volume }} {{ docker_image }}"
   tasks:
     - name: create taskd data directory
       file:
@@ -22,15 +20,6 @@
     - name: initialize taskd data directory
       command: "{{ docker_run }} taskd init"
       when: create_taskd_dir_result.changed
-    - name: change ownership of taskd config
-      file:
-        path: "{{ directory }}/config"
-        owner: app
-      become_user: root
-    - name: create taskd ansible directory
-      file:
-        path: "{{ directory }}/ansible"
-        state: directory
     - name: create taskd pki directory
       file:
         path: "{{ directory }}/pki"
@@ -45,23 +34,40 @@
         server.cert: /var/taskd/pki/server.cert.pem
         server.key: /var/taskd/pki/server.key.pem
         server: "0.0.0.0:53589"
+      become_user: root
     - name: copy pki files
       copy:
-        src: "taskd/{{ ansible_host }}-{{ item }}"
+        src: "{{ ansible_host }}-{{ item }}"
         dest: "{{ directory }}/pki/{{ item }}"
       with_items:
         - server.key.pem
         - server.cert.pem
+    - name: fetch organizations
+      command: "ls -1 {{ directory }}/orgs"
+      register: organizations_result
+      become_user: root
+    - debug: var=organizations_result
+    - name: remove organizations
+      command: "{{ docker_run }} taskd remove org {{ item }}"
+      with_items: "{{ organizations_result.stdout_lines | difference(organizations) }}"
     - name: add organizations
-      command: "{{ docker_run }} taskd add org {{ item.name }}"
-      args:
-        creates: "{{ directory }}/ansible/{{ item.name }}.organization"
-      with_items: organziations
+      command: "{{ docker_run }} taskd add org {{ item }}"
+      with_items: "{{ organizations | difference(organizations_result.stdout_lines) }}"
+    - name: fetch users
+      script: fetch_users.rb
+      register: users_result
+      become_user: root
+    - debug: "msg={{ users_result.stdout | from_yaml }}"
+    - debug: "msg={{ users }}"
+    - debug: "msg={{ users_result.stdout | from_yaml | difference(users) }}"
+    - name: remove users
+      command: "{{ docker_run }} taskd remove user {{ item.organization }} {{ item.name }}"
+      with_items: "{{ users_result.stdout | from_yaml | difference(users) }}"
     - name: add users
       command: "{{ docker_run }} taskd add user {{ item.organization }} {{ item.name }}"
       args:
         creates: "{{ directory }}/ansible/{{ item.name }}.{{ item.organization }}.user"
-      with_items: users
+      with_items: "{{ users | difference(users_results.stdout | from_yaml) }}"
     - name: start taskd
       docker_container:
         name: taskd
