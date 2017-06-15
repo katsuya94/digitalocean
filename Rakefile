@@ -28,6 +28,13 @@ apps.each do |app|
     task :push do
       shell "docker", "push", image
     end
+
+    task :deploy, [:user, :private_key_path, :check] do |_t, args|
+      args.with_defaults(check: true)
+      shell_check args[:check], "ansible-playbook", "-i", "hosts.rb",
+        "#{app}/deploy.yml", "--user", args[:user], "--private-key",
+        args[:private_key_path], "--ask-become-pass"
+    end
   end
 end
 
@@ -45,20 +52,11 @@ namespace :taskd do
   end
 end
 
-namespace :ansible do
-  task :setup, [:user, :private_key_path, :check] do |_t, args|
-    args.with_defaults(check: true)
-    shell_check args[:check], "ansible-playbook", "-i", "hosts.rb", "setup.yml",
-      "--user", args[:user], "--private-key", args[:private_key_path],
-      "--ask-become-pass"
-  end
-
-  task :app, [:user, :private_key_path, :check] do |_t, args|
-    args.with_defaults(check: true)
-    shell_check args[:check], "ansible-playbook", "-i", "hosts.rb", "app.yml",
-      "--user", args[:user], "--private-key", args[:private_key_path],
-      "--ask-become-pass"
-  end
+task :setup, [:user, :private_key_path, :check] do |_t, args|
+  args.with_defaults(check: true)
+  shell_check args[:check], "ansible-playbook", "-i", "hosts.rb", "setup.yml",
+    "--user", args[:user], "--private-key", args[:private_key_path],
+    "--ask-become-pass"
 end
 
 task :default => apps.flat_map { |app| ["#{app}:build", "#{app}:push"] }
