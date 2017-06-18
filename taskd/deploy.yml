@@ -4,9 +4,6 @@
   become: true
   become_user: app
   vars:
-    organizations:
-      - Public
-    users: []
     directory: /home/app/taskd
     docker_volume: "{{ directory }}:/var/taskd"
     docker_image: katsuya94/taskd:latest
@@ -46,28 +43,15 @@
       command: "ls -1 {{ directory }}/orgs"
       register: organizations_result
       become_user: root
-    - debug: var=organizations_result
-    - name: remove organizations
-      command: "{{ docker_run }} taskd remove org {{ item }}"
-      with_items: "{{ organizations_result.stdout_lines | difference(organizations) }}"
-    - name: add organizations
-      command: "{{ docker_run }} taskd add org {{ item }}"
-      with_items: "{{ organizations | difference(organizations_result.stdout_lines) }}"
-    - name: fetch users
-      script: fetch_users.rb
-      register: users_result
-      become_user: root
-    - debug: "msg={{ users_result.stdout | from_yaml }}"
-    - debug: "msg={{ users }}"
-    - debug: "msg={{ users_result.stdout | from_yaml | difference(users) }}"
-    - name: remove users
-      command: "{{ docker_run }} taskd remove user {{ item.organization }} {{ item.name }}"
-      with_items: "{{ users_result.stdout | from_yaml | difference(users) }}"
-    - name: add users
-      command: "{{ docker_run }} taskd add user {{ item.organization }} {{ item.name }}"
+      changed_when: no
+    - name: add organization
+      command: "{{ docker_run }} taskd add org Public"
       args:
-        creates: "{{ directory }}/ansible/{{ item.name }}.{{ item.organization }}.user"
-      with_items: "{{ users | difference(users_results.stdout | from_yaml) }}"
+        creates: "{{ directory }}/orgs/Public"
+    - name: add user
+      command: "{{ docker_run }} taskd add user Public kacchan"
+      args:
+        creates: "{{ directory }}/orgs/Public/*"
     - name: start taskd
       docker_container:
         name: taskd
