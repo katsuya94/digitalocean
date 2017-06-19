@@ -51,6 +51,27 @@ namespace :taskd do
   end
 end
 
+namespace :ca do
+  ca_key = "ca/ca.key.pem"
+  ca_cert = "ca/ca.cert.pem"
+
+  task :root do
+    shell "openssl", "req", "-x509", "-newkey", "rsa:4096", "-keyout",
+      ca_key, "-new", "-nodes", "-sha256", "-days", "1024", "-subj",
+      "/CN=Adrien Katsuya Tateno", "-out", ca_cert
+    
+    shell "ansible-vault", "encrypt", ca_cert
+  end
+
+  task :sign, [:file, :common_name] do |_t, args|
+    key = "files/pki"
+    shell "openssl", "req", "-x509", "-newkey", "rsa:4096", "-keyout",
+      ca_key, "-new", "-nodes", "-sha256", "-days", "1024", "-subj",
+      "/CN=Adrien Katsuya Tateno", "-out", ca_cert
+    
+    shell "ansible-vault", "encrypt", ca_cert
+end
+
 task :setup, [:user, :private_key_path, :check] do |_t, args|
   args.with_defaults(check: true)
   shell_check args[:check], "ansible-playbook", "-i", "hosts.rb", "setup.yml",

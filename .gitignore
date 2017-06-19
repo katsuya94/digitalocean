@@ -3,3 +3,5 @@
 .vault_pass.txt
 *.swp
 *.retry
+ca/ca.key
+
