@@ -48,10 +48,12 @@
       command: "{{ docker_run }} taskd add org Public"
       args:
         creates: "{{ directory }}/orgs/Public"
+      become_user: root
     - name: add user
       command: "{{ docker_run }} taskd add user Public kacchan"
       args:
         creates: "{{ directory }}/orgs/Public/*"
+      become_user: root
     - name: start taskd
       docker_container:
         name: taskd
