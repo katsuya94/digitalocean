@@ -41,24 +41,28 @@
     - block:
         - name: generate server csr
           openssl_csr:
-            privatekey_path: "{{ directory/pki/server.key.pem }}"
+            privatekey_path: "{{ directory }}/pki/server.key.pem"
             CN: "{{ ansible_host }}"
-            path: /tmp/server.csr
+            path: "/tmp/{{ inventory_hostname }}-server.csr"
         - name: fetch server csr
           fetch:
-            src: /tmp/server.csr
-            dest: taskd/files
+            src: "/tmp/{{ inventory_hostname }}-server.csr"
+            dest: files/
+            flat: yes
         - name: sign server cert
-          command: "rake ca:sign taskd/files/{{ inventory_hostname }}/server"
+          command: "rake ca:sign[taskd/files/{{ inventory_hostname }}-server]"
           delegate_to: localhost
+          connection: local
+          become: false
         - name: copy server cert
           copy:
-            src: "{{ inventory_hostname }}/server.cert.pem"
+            src: "{{ inventory_hostname }}-server.cert.pem"
             dest: "{{ directory }}/pki/server.cert.pem"
+          when: not ansible_check_mode
       when: generate_server_key_result.changed
     - name: copy ca cert
       copy:
-        src: "../pki/ca.cert.pem"
+        src: "../files/pki/cacert.pem"
         dest: "{{ directory }}/pki/ca.cert.pem"
     - name: add organization
       command: "{{ docker_run }} taskd add org Public"
@@ -73,6 +77,7 @@
     - name: start taskd
       docker_container:
         name: taskd
+        restart: yes
         image: "{{ docker_image }}"
         volumes:
           - "{{ docker_volume }}"

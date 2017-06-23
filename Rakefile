@@ -30,8 +30,9 @@ apps.each do |app|
 end
 
 namespace :ca do
-  ca_key = 'files/pki/ca.key.pem'
-  ca_cert = 'files/pki/ca.cert.pem'
+  conf = 'files/pki/openssl.conf'
+  ca_key = 'files/pki/private/cakey.pem'
+  ca_cert = 'files/pki/cacert.pem'
 
   task :root do
     system 'openssl', 'req', '-x509', '-newkey', 'rsa:4096', '-keyout',
@@ -53,9 +54,9 @@ namespace :ca do
     cert = "#{args[:file_root]}.cert.pem"
     csr = "#{args[:file_root]}.csr"
 
-    with_decrypted ca_cert do
-      system 'openssl', 'ca', '-in', csr, '-cert', ca_cert, '-keyfile', ca_key,
-        '-out', cert
+    with_decrypted ca_cert, ca_key do
+      system 'openssl', 'ca', '-config', conf, '-in', csr, '-out', cert,
+        '-notext', '-batch'
     end
 
     system 'ansible-vault', 'encrypt', cert

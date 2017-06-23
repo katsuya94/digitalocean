@@ -4,5 +4,4 @@
 .DS_Store
 .env
 .vault_pass.txt
-files/pki/ca.key.pem
 

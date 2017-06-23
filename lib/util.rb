@@ -1,4 +1,10 @@
 module Util
+  extend ActiveSupport::Concern
+
+  included do
+    String.disable_colorization = !$stdout.isatty
+  end
+
   def info(msg)
     puts '[info] '.green + msg
   end
@@ -15,14 +21,14 @@ module Util
 
     Open3.popen3(*args) do |_, stdout, stderr, wait_thr|
       out_thr = Thread.new do
-        while line = stdout.gets
-          puts color_line(line)
+        while out_line = stdout.gets
+          puts color_line(out_line)
         end
       end
 
       err_thr = Thread.new do
-        while line = stderr.gets
-          puts line.red
+        while err_line = stderr.gets
+          puts err_line.red
         end
       end
 
@@ -45,11 +51,20 @@ module Util
       ENV['PB_USER'], '--private-key', ENV['PB_PRIVATE_KEY'],
       '--ask-become-pass'
 
-    if ENV['PB_CHECK'] == 'false'
-      system *args
-    else
+    unless ENV['PB_CHECK'] == 'false'
       info 'running in check mode (run with PB_CHECK=false to disable)'
-      system *args, '--check'
+      args << '--check'
+    end
+
+    unless (verbosity = ENV['PB_VERBOSITY'].presence.to_i).zero?
+      info "running with verbosity #{verbosity}"
+      args << "-#{verbosity.times.map { 'v' }.join}"
+    end
+
+    system *args
+
+    unless ENV['PB_CHECK'] == 'false'
+      info 'ran in check mode (run with PB_CHECK=false to disable)'
     end
   end
 
@@ -57,11 +72,16 @@ module Util
     system 'ansible-vault', 'encrypt', path
   end
 
-  def with_decrypted(path)
-    system 'ansible-vault', 'decrypt', path
+  def with_decrypted(*paths)
+    paths.each do |path|
+      system 'ansible-vault', 'decrypt', path
+    end
+
     yield
   ensure
-    system 'ansible-vault', 'encrypt', path
+    paths.each do |path|
+      system 'ansible-vault', 'encrypt', path
+    end
   end
 
   private
