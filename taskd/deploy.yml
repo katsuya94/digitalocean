@@ -8,42 +8,58 @@
     docker_volume: "{{ directory }}:/var/taskd"
     docker_image: katsuya94/taskd:latest
     docker_run: "docker run -v {{ docker_volume }} {{ docker_image }}"
+    csr_filename: "{{ ansible_date_time.iso8601_micro | to_uuid }}.csr"
   tasks:
     - name: create taskd data directory
       file:
         path: "{{ directory }}"
         state: directory
-      register: create_taskd_dir_result
+      register: create_taskd_data_directory_result
     - name: initialize taskd data directory
       command: "{{ docker_run }} taskd init"
-      when: create_taskd_dir_result.changed
+      when: create_taskd_data_directory_result.changed
     - name: create taskd pki directory
       file:
         path: "{{ directory }}/pki"
         state: directory
     - name: configure taskd
       lineinfile:
-        path: "{{ directory }}//config"
+        path: "{{ directory }}/config"
         regexp: "^{{ item.key | regex_escape }}="
         line: "{{ item.key }}={{ item.value }}"
       with_dict:
         log: "-"
+        ca.cert: /var/taskd/pki/ca.cert.pem
         server.cert: /var/taskd/pki/server.cert.pem
         server.key: /var/taskd/pki/server.key.pem
         server: "0.0.0.0:53589"
       become_user: root
-    - name: copy pki files
+    - name: generate server key
+      openssl_privatekey:
+        path: "{{ directory }}/pki/server.key.pem"
+      register: generate_server_key_result
+    - block:
+        - name: generate server csr
+          openssl_csr:
+            privatekey_path: "{{ directory/pki/server.key.pem }}"
+            CN: "{{ ansible_host }}"
+            path: /tmp/server.csr
+        - name: fetch server csr
+          fetch:
+            src: /tmp/server.csr
+            dest: taskd/files
+        - name: sign server cert
+          command: "rake ca:sign taskd/files/{{ inventory_hostname }}/server"
+          delegate_to: localhost
+        - name: copy server cert
+          copy:
+            src: "{{ inventory_hostname }}/server.cert.pem"
+            dest: "{{ directory }}/pki/server.cert.pem"
+      when: generate_server_key_result.changed
+    - name: copy ca cert
       copy:
-        src: "{{ ansible_host }}-{{ item }}"
-        dest: "{{ directory }}/pki/{{ item }}"
-      with_items:
-        - server.key.pem
-        - server.cert.pem
-    - name: fetch organizations
-      command: "ls -1 {{ directory }}/orgs"
-      register: organizations_result
-      become_user: root
-      changed_when: no
+        src: "../pki/ca.cert.pem"
+        dest: "{{ directory }}/pki/ca.cert.pem"
     - name: add organization
       command: "{{ docker_run }} taskd add org Public"
       args:

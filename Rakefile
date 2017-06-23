@@ -29,20 +29,6 @@ apps.each do |app|
   end
 end
 
-namespace :taskd do
-  task :certificate, [:hostname] do |_t, args|
-    fqdn = `./hosts.rb --ip #{args[:hostname]}`.chomp
-    key = "files/taskd/#{fqdn}-server.key.pem"
-    certificate = "files/taskd/#{fqdn}-server.cert.pem"
-
-    system 'openssl', 'req', '-newkey', 'rsa:2048', '-nodes', '-keyout', key,
-      '-x509', '-out', certificate, '-subj', "/CN=#{fqdn}"
-
-    system 'ansible-vault', 'encrypt', key
-    system 'ansible-vault', 'encrypt', certificate
-  end
-end
-
 namespace :ca do
   ca_key = 'files/pki/ca.key.pem'
   ca_cert = 'files/pki/ca.cert.pem'
