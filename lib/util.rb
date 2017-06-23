@@ -74,13 +74,14 @@ module Util
 
   def with_decrypted(*paths)
     paths.each do |path|
+      system 'cp', path, "#{path}.encrypted"
       system 'ansible-vault', 'decrypt', path
     end
 
     yield
   ensure
     paths.each do |path|
-      system 'ansible-vault', 'encrypt', path
+      system 'mv', '-f', "#{path}.encrypted", path
     end
   end
 
