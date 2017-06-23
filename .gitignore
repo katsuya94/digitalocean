@@ -1,7 +1,8 @@
+*.csr
+*.retry
+*.swp
 .DS_Store
 .env
 .vault_pass.txt
-*.swp
-*.retry
-ca/ca.key
+files/pki/ca.key.pem
 

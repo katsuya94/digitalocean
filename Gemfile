@@ -1,4 +1,7 @@
-source "https://rubygems.org"
+source 'https://rubygems.org'
 
-gem "dotenv"
-gem "rake"
+gem 'activesupport'
+gem 'colorize'
+gem 'dotenv'
+gem 'rake'
+gem 'rubocop'
