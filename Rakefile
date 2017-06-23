@@ -59,7 +59,11 @@ namespace :ca do
         '-notext', '-batch'
     end
 
-    system 'ansible-vault', 'encrypt', cert
+    serial = File.read('files/pki/serial.old').chomp
+    serial_cert = "files/pki/newcerts/#{serial}.pem"
+
+    encrypt cert
+    encrypt serial_cert
   end
 end
 

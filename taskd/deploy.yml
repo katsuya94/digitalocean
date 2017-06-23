@@ -36,11 +36,13 @@
       become_user: root
     - name: generate server key
       openssl_privatekey:
+        force: yes
         path: "{{ directory }}/pki/server.key.pem"
       register: generate_server_key_result
     - block:
         - name: generate server csr
           openssl_csr:
+            force: yes
             privatekey_path: "{{ directory }}/pki/server.key.pem"
             CN: "{{ ansible_host }}"
             path: "/tmp/{{ inventory_hostname }}-server.csr"
