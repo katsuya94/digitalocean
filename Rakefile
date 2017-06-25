@@ -43,7 +43,7 @@ namespace :ca do
     encrypt ca_cert
   end
 
-  task :csr, [:file_root, :common_name] do |_t, args|
+  task :csr, %i[file_root common_name] do |_t, args|
     args.with_defaults(common_name: File.basename(args[:file_root]))
     csr = "#{args[:file_root]}.csr"
     key = "#{args[:file_root]}.key.pem"

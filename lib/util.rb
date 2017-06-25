@@ -58,7 +58,7 @@ module Util
 
     unless (verbosity = ENV['PB_VERBOSITY'].presence.to_i).zero?
       info "running with verbosity #{verbosity}"
-      args << "-#{verbosity.times.map { 'v' }.join}"
+      args << "-#{Array.new(verbosity) { 'v' }.join}"
     end
 
     system *args

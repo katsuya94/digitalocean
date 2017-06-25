@@ -14,11 +14,17 @@ Lint/AssignmentInCondition:
 Metrics/AbcSize:
   Enabled: false
 
+Metrics/BlockLength:
+  Enabled: false
+
 Metrics/LineLength:
   Max: 80
 
 Metrics/MethodLength:
-  Max: 25
+  Enabled: false
 
 Style/Documentation:
+  Enabled: false
+
+Style/GuardClause:
   Enabled: false
