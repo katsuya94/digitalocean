@@ -32,6 +32,7 @@
         ca.cert: /var/taskd/pki/ca.cert.pem
         server.cert: /var/taskd/pki/server.cert.pem
         server.key: /var/taskd/pki/server.key.pem
+        server.crl: /var/taskd/pki/crl.pem
         server: "0.0.0.0:53589"
       become_user: root
     - name: generate server key
@@ -43,7 +44,7 @@
           openssl_csr:
             force: yes
             privatekey_path: "{{ directory }}/pki/server.key.pem"
-            CN: "{{ ansible_host }}"
+            CN: "{{ ansible_hostname }}"
             path: "/tmp/{{ inventory_hostname }}-server.csr"
         - name: fetch server csr
           fetch:
@@ -65,6 +66,10 @@
       copy:
         src: "../files/pki/cacert.pem"
         dest: "{{ directory }}/pki/ca.cert.pem"
+    - name: copy crl
+      copy:
+        src: "../files/pki/crl.pem"
+        dest: "{{ directory }}/pki/crl.pem"
     - name: add organization
       command: "{{ docker_run }} taskd add org Public"
       args:
