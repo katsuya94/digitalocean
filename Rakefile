@@ -67,6 +67,18 @@ namespace :ca do
     encrypt cert
     encrypt serial_cert
   end
+
+  task :revoke, [:serial] do |_t, args|
+    serial_cert = "files/pki/newcerts/#{args[:serial]}.pem"
+    crl = 'files/pki/crl.pem'
+    
+    with_decrypted ca_cert, ca_key, serial_cert do
+      system 'openssl', 'ca', '-config', conf, '-revoke', serial_cert
+      system 'openssl', 'ca', '-config', conf, '-gencrl', '-out', crl
+    end
+
+    encrypt crl
+  end
 end
 
 task :setup do
