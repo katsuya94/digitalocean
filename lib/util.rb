@@ -54,6 +54,7 @@ module Util
     unless ENV['PB_CHECK'] == 'false'
       info 'running in check mode (run with PB_CHECK=false to disable)'
       args << '--check'
+      args << '--diff'
     end
 
     unless (verbosity = ENV['PB_VERBOSITY'].presence.to_i).zero?

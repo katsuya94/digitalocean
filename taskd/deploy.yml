@@ -37,6 +37,7 @@
       become_user: root
     - name: generate server key
       openssl_privatekey:
+        force: yes
         path: "{{ directory }}/pki/server.key.pem"
       register: generate_server_key_result
     - block:
@@ -56,12 +57,12 @@
           delegate_to: localhost
           connection: local
           become: false
-        - name: copy server cert
-          copy:
-            src: "{{ inventory_hostname }}-server.cert.pem"
-            dest: "{{ directory }}/pki/server.cert.pem"
-          when: not ansible_check_mode
       when: generate_server_key_result.changed
+    - name: copy server cert
+      copy:
+        src: "{{ inventory_hostname }}-server.cert.pem"
+        dest: "{{ directory }}/pki/server.cert.pem"
+      when: not (ansible_check_mode and generate_server_key_result.changed)
     - name: copy ca cert
       copy:
         src: "../files/pki/cacert.pem"
