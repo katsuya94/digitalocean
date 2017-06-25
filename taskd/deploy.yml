@@ -37,7 +37,6 @@
       become_user: root
     - name: generate server key
       openssl_privatekey:
-        force: yes
         path: "{{ directory }}/pki/server.key.pem"
       register: generate_server_key_result
     - block:
