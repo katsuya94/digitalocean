@@ -73,7 +73,7 @@
     - name: add user
       command: "{{ docker_run }} taskd add user Public kacchan"
       args:
-        creates: "{{ directory }}/orgs/Public/*"
+        creates: "{{ directory }}/orgs/Public/users/*"
       become_user: root
     - name: start taskd
       docker_container:
