@@ -3,10 +3,9 @@
   hosts: digitalocean
   become: true
   become_user: app
+  vars_files:
+    - vars/docker.yml
   vars:
-    directory: /home/app/taskd
-    docker_volume: "{{ directory }}:/var/taskd"
-    docker_image: katsuya94/taskd:latest
     docker_run: "docker run -v {{ docker_volume }} {{ docker_image }}"
     csr_filename: "{{ ansible_date_time.iso8601_micro | to_uuid }}.csr"
   tasks:
@@ -34,6 +33,8 @@
         server.key: /var/taskd/pki/server.key.pem
         server.crl: /var/taskd/pki/crl.pem
         server: "0.0.0.0:53589"
+        debug: "on"
+        debug.tls: 9
       become_user: root
     - name: generate server key
       openssl_privatekey:
@@ -80,14 +81,4 @@
       args:
         creates: "{{ directory }}/orgs/Public/users/*"
       become_user: root
-    - name: start taskd
-      docker_container:
-        name: taskd
-        restart: yes
-        image: "{{ docker_image }}"
-        volumes:
-          - "{{ docker_volume }}"
-        exposed:
-          - "53589"
-        ports:
-          - "53589:53589"
+    - import_tasks: tasks/bounce.yml

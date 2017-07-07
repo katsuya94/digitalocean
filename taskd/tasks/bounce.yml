@@ -1,0 +1,12 @@
+---
+- name: (re)start taskd
+  docker_container:
+    name: taskd
+    restart: yes
+    image: "{{ docker_image }}"
+    volumes:
+      - "{{ docker_volume }}"
+    exposed:
+      - "53589"
+    ports:
+      - "53589:53589"

@@ -49,12 +49,11 @@ module Util
 
     *args = 'ansible-playbook', '-i', 'hosts.rb', playbook, '--user',
       ENV['PB_USER'], '--private-key', ENV['PB_PRIVATE_KEY'],
-      '--ask-become-pass'
+      '--ask-become-pass', '--diff'
 
     unless ENV['PB_CHECK'] == 'false'
       info 'running in check mode (run with PB_CHECK=false to disable)'
       args << '--check'
-      args << '--diff'
     end
 
     unless (verbosity = ENV['PB_VERBOSITY'].presence.to_i).zero?
@@ -94,6 +93,8 @@ module Util
     when /^skipping:/ then color_first_word(line, :blue)
     when /^fatal:/ then color_first_word(line, :red)
     when /^changed:/ then color_first_word(line, :yellow)
+    when /^\+/ then line.green
+    when /^-/ then line.red
     else line
     end
   end

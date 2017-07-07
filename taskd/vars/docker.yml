@@ -1,0 +1,4 @@
+---
+directory: /home/app/taskd
+docker_volume: "{{ directory }}:/var/taskd"
+docker_image: katsuya94/taskd:latest
