@@ -8,7 +8,7 @@ require_relative 'lib/util'
 
 include Util
 
-apps = %w[taskd]
+apps = %w[taskd znc]
 
 apps.each do |app|
   namespace app do

@@ -1,0 +1,9 @@
+---
+- name: znc
+  hosts: digitalocean
+  become: true
+  become_user: app
+  vars_files:
+    - vars/docker.yml
+  tasks:
+    - import_tasks: tasks/bounce.yml

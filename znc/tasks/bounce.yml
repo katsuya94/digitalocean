@@ -1,0 +1,10 @@
+---
+- name: (re)start znc
+  docker_container:
+    name: znc
+    restart: yes
+    image: "{{ docker_image }}"
+    exposed:
+      - "6667"
+    ports:
+      - "6667:6667"
