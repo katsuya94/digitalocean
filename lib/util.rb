@@ -42,12 +42,20 @@ module Util
     fatal format_command(*args, :red) + " exited with status #{exit_status}"
   end
 
-  def ansible(playbook)
+  def ansible_playbook(playbook)
+    ansible 'ansible-playbook', playbook
+  end
+
+  def ansible_module(mojule)
+    ansible 'ansible', 'all', '-m', mojule
+  end
+
+  def ansible(*args)
     %w[PB_USER PB_PRIVATE_KEY].each do |env|
       fatal "#{env} not present" unless ENV[env].present?
     end
 
-    *args = 'ansible-playbook', '-i', 'hosts.rb', playbook, '--user',
+    *args = *args, '-i', 'hosts.rb', '--user',
       ENV['PB_USER'], '--private-key', ENV['PB_PRIVATE_KEY'],
       '--ask-become-pass', '--diff'
 

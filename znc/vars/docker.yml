@@ -1,2 +1,4 @@
 ---
+directory: /home/app/znc
+docker_volume: "{{ directory }}:/home/app"
 docker_image: katsuya94/znc:latest

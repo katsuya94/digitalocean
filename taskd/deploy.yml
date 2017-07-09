@@ -9,6 +9,10 @@
     docker_run: "docker run -v {{ docker_volume }} {{ docker_image }}"
     csr_filename: "{{ ansible_date_time.iso8601_micro | to_uuid }}.csr"
   tasks:
+    - name: pull image
+      docker_image:
+        name: "{{ docker_image }}"
+        force: yes
     - name: create taskd data directory
       file:
         path: "{{ directory }}"
@@ -33,44 +37,19 @@
         server.key: /var/taskd/pki/server.key.pem
         server.crl: /var/taskd/pki/crl.pem
         server: "0.0.0.0:53589"
-        debug: "on"
-        debug.tls: 9
+        debug: "off"
+        debug.tls: 0
       become_user: root
-    - name: generate server key
-      openssl_privatekey:
-        path: "{{ directory }}/pki/server.key.pem"
-      register: generate_server_key_result
-    - block:
-        - name: generate server csr
-          openssl_csr:
-            force: yes
-            privatekey_path: "{{ directory }}/pki/server.key.pem"
-            CN: "{{ ansible_hostname }}"
-            path: "/tmp/{{ inventory_hostname }}-server.csr"
-        - name: fetch server csr
-          fetch:
-            src: "/tmp/{{ inventory_hostname }}-server.csr"
-            dest: files/
-            flat: yes
-        - name: sign server cert
-          command: "rake ca:sign[taskd/files/{{ inventory_hostname }}-server]"
-          delegate_to: localhost
-          connection: local
-          become: false
-      when: generate_server_key_result.changed
-    - name: copy server cert
+    - name: copy pki
       copy:
-        src: "{{ inventory_hostname }}-server.cert.pem"
-        dest: "{{ directory }}/pki/server.cert.pem"
-      when: not (ansible_check_mode and generate_server_key_result.changed)
-    - name: copy ca cert
-      copy:
-        src: "../files/pki/cacert.pem"
-        dest: "{{ directory }}/pki/ca.cert.pem"
-    - name: copy crl
-      copy:
-        src: "../files/pki/crl.pem"
-        dest: "{{ directory }}/pki/crl.pem"
+        src: "{{ item.key }}"
+        dest: "{{ item.value }}"
+        remote_src: yes
+      with_dict:
+        "/home/app/pki/server.key.pem": "{{ directory }}/pki/server.key.pem"
+        "/home/app/pki/server.cert.pem": "{{ directory }}/pki/server.cert.pem"
+        "/home/app/pki/ca.cert.pem": "{{ directory }}/pki/ca.cert.pem"
+        "/home/app/pki/crl.pem": "{{ directory }}/pki/crl.pem"
     - name: add organization
       command: "{{ docker_run }} taskd add org Public"
       args:

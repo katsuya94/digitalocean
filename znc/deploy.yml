@@ -5,7 +5,52 @@
   become_user: app
   vars_files:
     - vars/docker.yml
-  vars:
-    docker_run: "docker run {{ docker_image }}"
   tasks:
+    - name: stop znc
+      docker_container:
+        name: znc
+        image: "{{ docker_image }}"
+        state: stopped
+    - name: pull image
+      docker_image:
+        name: "{{ docker_image }}"
+        force: yes
+    - name: create znc directory
+      file:
+        path: "{{ directory }}"
+        owner: app
+        state: directory
+      become_user: root
+    - name: retrieve password
+      command: "../password_input.py 'ZNC password:'"
+      delegate_to: localhost
+      connection: local
+      become: false
+      register: retrieve_password_result
+    - name: configure znc
+      expect:
+        command: "docker run -it -v {{ docker_volume }} {{ docker_image }} znc --makeconf"
+        responses:
+          "Listen on port": "7000"
+          "Listen using SSL": "yes"
+          "Listen using both IPv4 and IPv6": "yes"
+          "Username": "kacchan"
+          "Enter password": "{{ retrieve_password_result.stdout | trim }}"
+          "Confirm password": "{{ retrieve_password_result.stdout | trim }}"
+          "Nick": "kacchan"
+          "Alternate nick": "kacchan"
+          "Ident": "kacchan"
+          "Real name": "Katsuya"
+          "Bind host": ""
+          "Set up a network?": "yes"
+          "Name": "Rizon"
+          "Server host": "irc.rizon.net"
+          "Server uses SSL?": "yes"
+          "Server port": "6697"
+          "Server password": ""
+          "Initial channels": "#nuanime"
+          "Launch ZNC now?": "no"
+          "Are you sure you want to overwrite it?": "yes"
+    - name: concatenate server key and cert
+      shell: "cat /home/app/pki/server.key.pem /home/app/pki/server.cert.pem > {{ directory }}/.znc/znc.pem"
     - import_tasks: tasks/bounce.yml

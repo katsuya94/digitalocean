@@ -15,20 +15,30 @@ apps.each do |app|
     repository = "katsuya94/#{app}"
     image = "#{repository}:latest"
 
-    task :build do
-      system 'docker', 'build', app, '-t', image
-    end
+    namespace :docker do
+      task :build do
+        system 'docker', 'build', app, '-t', image
+      end
 
-    task :push do
-      system 'docker', 'push', image
+      task :push do
+        system 'docker', 'push', image
+      end
+      
+      task :pull do
+        system 'docker', 'pull', image
+      end
+
+      task :shell do
+        exec 'docker', 'run', '-it', image, '/bin/sh'
+      end
     end
 
     task :deploy do
-      ansible "#{app}/deploy.yml"
+      ansible_playbook "#{app}/deploy.yml"
     end
 
     task :bounce do
-      ansible "#{app}/bounce.yml"
+      ansible_playbook "#{app}/bounce.yml"
     end
   end
 end
@@ -85,8 +95,16 @@ namespace :ca do
   end
 end
 
+task :facts do
+  ansible_module 'setup'
+end
+
 task :setup do
-  ansible 'setup.yml'
+  ansible_playbook 'setup.yml'
+end
+
+task :ssh, [:host] do |_t, args|
+  exec 'ssh', "#{ENV['PB_USER']}@#{args[:host]}", "-i", ENV['PB_PRIVATE_KEY']
 end
 
 task default: apps.flat_map { |app| ["#{app}:build", "#{app}:push"] }
